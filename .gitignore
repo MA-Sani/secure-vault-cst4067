@@ -1,0 +1,21 @@
+@"
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# Firebase service account
+serviceaccount.json
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+"@ | Out-File -Encoding utf8 .gitignore

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}Access Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📊 Access Analytics</h1>
+    <p>Live data from BigQuery · Streamed on every file access event</p>
+</div>
+
+{% if error %}
+<div class="alert alert-error">
+    BigQuery error: {{ error }}<br>
+    Make sure <code>setup_bigquery.py</code> has been run and the table exists.
+</div>
+{% else %}
+
+<!-- ── Anomalies ── -->
+<div class="card">
+    <div class="card-head">
+        <h2>🚨 Anomalous Users</h2>
+        <span class="count-badge">3+ denials in last 24 hours</span>
+    </div>
+    {% if data.get('anomalous_users') %}
+    <table>
+        <thead>
+            <tr><th>User UID</th><th>Department</th><th>Denials (24h)</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            {% for row in data.anomalous_users %}
+            <tr>
+                <td><code>{{ row.user_uid[:16] }}…</code></td>
+                <td>{{ row.user_department }}</td>
+                <td><b style="color: var(--danger)">{{ row.denial_count }}</b></td>
+                <td><span class="badge badge-deny">⚠ Flagged</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:1.5rem">
+        <p>✓ No anomalous access patterns detected in the last 24 hours.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Denials per user ── -->
+<div class="card">
+    <div class="card-head">
+        <h2>✗ Denials Per User</h2>
+        <span class="count-badge">All time · Top 10</span>
+    </div>
+    {% if data.get('denials_per_user') %}
+    <table>
+        <thead>
+            <tr><th>User UID</th><th>Department</th><th>Total Denials</th></tr>
+        </thead>
+        <tbody>
+            {% for row in data.denials_per_user %}
+            <tr>
+                <td><code>{{ row.user_uid[:16] }}…</code></td>
+                <td>{{ row.user_department }}</td>
+                <td>{{ row.total_denials }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:1.5rem">
+        <p>No denial events recorded yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Access by department ── -->
+<div class="card">
+    <div class="card-head">
+        <h2>🏢 Access Events by Department</h2>
+    </div>
+    {% if data.get('access_by_department') %}
+    <table>
+        <thead>
+            <tr><th>Department</th><th>Total Events</th><th>Allowed</th><th>Denied</th><th>Allow Rate</th></tr>
+        </thead>
+        <tbody>
+            {% for row in data.access_by_department %}
+            {% set rate = ((row.allowed / row.total_events) * 100) | round(1) if row.total_events > 0 else 0 %}
+            <tr>
+                <td><span class="badge badge-info">{{ row.user_department }}</span></td>
+                <td>{{ row.total_events }}</td>
+                <td style="color: var(--success)">{{ row.allowed }}</td>
+                <td style="color: var(--danger)">{{ row.denied }}</td>
+                <td>
+                    <div class="rate-bar-wrap">
+                        <div class="rate-bar" style="width: {{ rate }}%"></div>
+                        <span>{{ rate }}%</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:1.5rem">
+        <p>No access events recorded yet. Upload and download some files first.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endif %}
+{% endblock %}

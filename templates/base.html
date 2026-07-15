@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SecureVault{% endblock %} · CST4067</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+{% if session.uid %}
+<nav>
+    <div class="nav-brand">🔐 SecureVault</div>
+    <div class="nav-links">
+        <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
+        {% if session.is_admin %}
+        <a href="{{ url_for('admin') }}"     {% if request.endpoint == 'admin'     %}class="active"{% endif %}>Admin</a>
+        <a href="{{ url_for('analytics') }}" {% if request.endpoint == 'analytics' %}class="active"{% endif %}>Analytics</a>
+        {% endif %}
+        <span class="nav-user">{{ session.email }} · <span class="dept-badge">{{ session.department }}</span></span>
+        <a href="{{ url_for('logout') }}" class="nav-logout">Logout</a>
+    </div>
+</nav>
+{% endif %}
+
+<main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="alerts">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            {{ '✓' if category == 'success' else '✗' }} {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

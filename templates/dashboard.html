@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📁 File Vault</h1>
+    <p>Encrypted file storage · Access controlled by ABAC policy engine</p>
+</div>
+
+<div class="two-col">
+
+    <!-- ── Upload card ── -->
+    <div class="card">
+        <h2>Upload New File</h2>
+        <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Choose file</label>
+                <input type="file" name="file" required>
+                <small>File will be encrypted with AES-256-GCM before upload.</small>
+            </div>
+            <div class="form-group">
+                <label>Access policy</label>
+                <select name="policy_id">
+                    <option value="">No policy (owner only)</option>
+                    {% for p in policies %}
+                    <option value="{{ p.id }}">{{ p.policy_name }}</option>
+                    {% endfor %}
+                </select>
+                <small>ABAC policy determines who can read this file.</small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">🔒 Encrypt &amp; Upload</button>
+        </form>
+    </div>
+
+    <!-- ── User profile card ── -->
+    <div class="card">
+        <h2>Your ABAC Profile</h2>
+        {% if user %}
+        <table class="profile-table">
+            <tr><td class="label">Name</td>           <td>{{ user.name }}</td></tr>
+            <tr><td class="label">Department</td>     <td><span class="badge badge-info">{{ user.department }}</span></td></tr>
+            <tr><td class="label">Clearance Level</td><td><span class="badge badge-warn">Level {{ user.clearance_level }}</span></td></tr>
+        </table>
+        <p class="profile-note">These attributes are evaluated by the ABAC engine on every file request.</p>
+        {% else %}
+        <p class="text-muted">Profile not found in Firestore.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ── Files table ── -->
+<div class="card">
+    <div class="card-head">
+        <h2>All Files</h2>
+        <span class="count-badge">{{ files|length }} file{{ 's' if files|length != 1 }}</span>
+    </div>
+
+    {% if files %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th>Owner</th>
+                    <th>Uploaded</th>
+                    <th>Policy</th>
+                    <th>Your Access</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in files %}
+                <tr class="{{ 'row-owner' if f.is_owner else 'row-allow' if f.can_read else 'row-deny' }}">
+                    <td class="filename">
+                        🗂 {{ f.file_name }}
+                        {% if f.is_owner %}<span class="tag tag-owner">owner</span>{% endif %}
+                    </td>
+                    <td>{{ f.owner_email }}</td>
+                    <td>{{ f.upload_date[:10] if f.upload_date else '—' }}</td>
+                    <td>
+                        {% if f.policy_id %}
+                        <span class="badge badge-info">{{ f.policy_id }}</span>
+                        {% else %}
+                        <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if f.can_read %}
+                        <span class="badge badge-allow" title="{{ f.access_reason }}">✓ Allowed</span>
+                        {% else %}
+                        <span class="badge badge-deny"  title="{{ f.access_reason }}">✗ Denied</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions-cell">
+                        {% if f.can_read %}
+                        <a href="{{ url_for('download', file_id=f.id) }}" class="btn btn-sm btn-success">↓ Download</a>
+                        {% endif %}
+                        {% if f.is_owner or session.is_admin %}
+                        <form method="POST" action="{{ url_for('delete_file', file_id=f.id) }}" style="display:inline">
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Delete {{ f.file_name }}?')">✕ Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <p class="table-note">
+        Hover over <b>Allowed / Denied</b> to see the ABAC reason.
+        Access checks run live on every page load — changing a user's attributes takes effect immediately.
+    </p>
+
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📂</div>
+        <p>No files uploaded yet. Use the form above to add the first one.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
